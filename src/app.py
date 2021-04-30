@@ -10,12 +10,17 @@ from api.utils import APIException, generate_sitemap
 from api.models import db
 from api.routes import api
 from api.admin import setup_admin
+from flask_socketio import SocketIO, emit, join_room
 #from models import Person
 
 ENV = os.getenv("FLASK_ENV")
 static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../public/')
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+
+#socket-io
+app.config['SECRET-KEY'] = 'deve key'
+socket = SocketIO(app,  cors_allowed_origins="*")
 
 # database condiguration
 if os.getenv("DATABASE_URL") is not None:
@@ -56,6 +61,39 @@ def serve_any_other_file(path):
     response = send_from_directory(static_file_dir, path)
     response.cache_control.max_age = 0 # avoid cache memory
     return response
+
+@socket.on('connect')
+def on_connect():
+    print('user connected')
+    retrieve_active_users()
+
+def retrieve_active_users():
+    emit('retrieve_active_users', broadcast=True)
+
+@socket.on('activate_user')
+def on_active_user(data):
+    user = data.get('username')
+    emit('user_activated', {'user': user}, broadcast=True)
+
+
+@socket.on('deactivate_user')
+def on_inactive_user(data):
+    user = data.get('username')
+    emit('user_deactivated', {'user': user}, broadcast=True)
+
+
+@socket.on('join_room')
+def on_join(data):
+    room = data['room']
+    join_room(room)
+    emit('open_room', {'room': room}, broadcast=True)
+
+
+@socket.on('send_message')
+def on_chat_sent(data):
+    room = data['room']
+    emit('message_sent', data, room=room)
+
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

@@ -11,5 +11,8 @@ import "../styles/index.scss";
 //import your own components
 import Layout from "./layout";
 
+import io from "socket.io-client";
+const socket = io(process.env.BACKEND_URL);
+
 //render your react application
-ReactDOM.render(<Layout />, document.querySelector("#app"));
+ReactDOM.render(<Layout socket={socket} />, document.querySelector("#app"));
